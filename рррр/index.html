@@ -1,0 +1,126 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CyberCam | Security Lab</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; padding: 24px;
+      background: #050a0e; color: #00ff9c;
+      font: 15px Consolas, monospace;
+      display: grid; place-items: center;
+    }
+    main {
+      width: 100%; max-width: 650px;
+      border: 1px solid #087d59; border-radius: 14px;
+      padding: 24px; background: #081219;
+      box-shadow: 0 0 35px #00ff9c12;
+    }
+    h1 { letter-spacing: 4px; font-size: 27px; }
+    .muted { color: #83a99a; line-height: 1.7; }
+    .status { margin: 20px 0; padding: 12px;
+      border-left: 3px solid #00ff9c; background: #00ff9c0b; }
+    video {
+      display: block; width: 100%; max-height: 380px;
+      background: #020506; border-radius: 8px;
+      margin: 16px 0; object-fit: cover;
+    }
+    button {
+      padding: 13px 16px; margin: 5px 5px 5px 0;
+      border: 1px solid #00ff9c; border-radius: 6px;
+      background: transparent; color: #00ff9c;
+      font: inherit; cursor: pointer;
+    }
+    button:disabled { opacity: .4; cursor: default; }
+    .stop { border-color: #ff6262; color: #ff8585; }
+    footer { color: #83a99a; font-size: 12px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+<main>
+  <div>● CYBERLAB / EDUCATIONAL PROJECT</div>
+  <h1>CYBERCAM_01</h1>
+  <p class="muted">
+    Демонстрация разрешений камеры Android.
+    Камера включится только после твоего действия
+    и разрешения браузера.
+  </p>
+
+  <div class="status" id="status" role="status">
+    [READY] Камера выключена.
+  </div>
+
+  <video id="camera" autoplay playsinline muted hidden></video>
+
+  <button id="start">Разрешить камеру</button>
+  <button id="stop" class="stop" disabled>Выключить камеру</button>
+
+  <footer>
+    Локальный просмотр · Видео не загружается на сервер.
+    Ты можешь остановить камеру в любой момент.
+  </footer>
+</main>
+
+<script>
+  const video = document.querySelector("#camera");
+  const status = document.querySelector("#status");
+  const start = document.querySelector("#start");
+  const stop = document.querySelector("#stop");
+  let stream = null;
+
+  function setStatus(message) {
+    status.textContent = message;
+  }
+
+  start.addEventListener("click", async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setStatus("ОШИБКА: открой страницу через HTTPS.");
+      return;
+    }
+
+    start.disabled = true;
+    setStatus("[REQUEST] Ожидаем разрешение камеры...");
+
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false
+      });
+
+      video.srcObject = stream;
+      video.hidden = false;
+      stop.disabled = false;
+      setStatus("[ACTIVE] Камера включена на этом устройстве.");
+    } catch (error) {
+      start.disabled = false;
+      const messages = {
+        NotAllowedError: "Доступ запрещён. Проверь разрешения браузера.",
+        NotFoundError: "Камера не найдена.",
+        NotReadableError: "Камера занята другим приложением."
+      };
+      setStatus("[ERROR] " + (
+        messages[error.name] || "Не удалось открыть камеру."
+      ));
+    }
+  });
+
+  function stopCamera() {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      stream = null;
+    }
+    video.srcObject = null;
+    video.hidden = true;
+    stop.disabled = true;
+    start.disabled = false;
+    setStatus("[STOPPED] Камера выключена.");
+  }
+
+  stop.addEventListener("click", stopCamera);
+  window.addEventListener("pagehide", stopCamera);
+</script>
+</body>
+</html>
